@@ -1,17 +1,23 @@
+// src/components/NewsAnalyzer.tsx
 import React, { useState } from 'react';
-import { ReliabilityScore } from './ReliabilityScore';
-import type { AnalysisResult } from '../types';
+import { analyzeArticle } from '../services/robertaService';
 
 const NewsAnalyzer: React.FC = () => {
   const [articleText, setArticleText] = useState('');
-  const [articleUrl, setArticleUrl] = useState('');
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<{
+    factualScore: number;
+    details: Array<{
+      question: string;
+      answer: string;
+      confidence: number;
+    }>;
+  } | null>(null);
 
   const handleAnalyze = async () => {
-    if (articleText.trim().length < 10) {
-      setError('Please enter at least 10 characters');
+    if (articleText.trim().length < 50) {
+      setError('Please enter at least 50 characters');
       return;
     }
 
@@ -19,14 +25,8 @@ const NewsAnalyzer: React.FC = () => {
     setError(null);
 
     try {
-      // Simulated analysis
-      const result: AnalysisResult = {
-        reliability: Math.random(),
-        factualScore: Math.random(),
-        biasScore: Math.random(),
-        sourceScore: Math.random()
-      };
-      setAnalysis(result);
+      const results = await analyzeArticle(articleText);
+      setAnalysisResults(results);
     } catch (err) {
       setError('Analysis failed');
     } finally {
@@ -36,7 +36,7 @@ const NewsAnalyzer: React.FC = () => {
 
   return (
     <div className="w-full max-w-4xl bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-4">News Article Analyzer</h2>
+      <h2 className="text-2xl font-bold mb-4">News Article Fact Checker</h2>
       
       <div className="space-y-4">
         <textarea
@@ -44,15 +44,6 @@ const NewsAnalyzer: React.FC = () => {
           placeholder="Paste article text here..."
           value={articleText}
           onChange={(e) => setArticleText(e.target.value)}
-          disabled={isLoading}
-        />
-        
-        <input
-          type="url"
-          className="w-full p-2 border rounded-md"
-          placeholder="Article URL (optional)"
-          value={articleUrl}
-          onChange={(e) => setArticleUrl(e.target.value)}
           disabled={isLoading}
         />
         
@@ -70,9 +61,26 @@ const NewsAnalyzer: React.FC = () => {
           </div>
         )}
 
-        {analysis && (
+        {analysisResults && (
           <div className="space-y-4">
-            <ReliabilityScore scores={analysis} />
+            <div className="p-4 bg-blue-50 rounded-md">
+              <h3 className="font-semibold mb-2">Factual Score</h3>
+              <p className="text-lg">
+                {(analysisResults.factualScore * 100).toFixed(1)}%
+              </p>
+            </div>
+
+            <div className="divide-y">
+              {analysisResults.details.map((detail, index) => (
+                <div key={index} className="py-4">
+                  <p className="font-medium text-gray-700">{detail.question}</p>
+                  <p className="mt-1">{detail.answer}</p>
+                  <p className="text-sm text-gray-500">
+                    Confidence: {(detail.confidence * 100).toFixed(1)}%
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
